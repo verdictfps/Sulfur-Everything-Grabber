@@ -36,6 +36,7 @@ public class Plugin : BaseUnityPlugin
     private ConfigEntry<KeyboardShortcut> GrabWeapons { get; set; }
     private ConfigEntry<KeyboardShortcut> GrabEnchantments { get; set; }
     private ConfigEntry<KeyboardShortcut> GrabEquipment { get; set; }
+    public static InventoryUI inventoryUI { get; set; }
 
     private void Awake()
     {
@@ -87,13 +88,26 @@ public class Plugin : BaseUnityPlugin
             weaponPropertyList.Add(returnDTO);
         }
     }
-    
+
+    [HarmonyPatch(typeof(InventoryUI), "Start")]
+    public class InventoryInterceptor
+    {
+        public static void Postfix(object __instance)
+        {
+            Debug.Log("[ Mod: EverythingGrabber ] Postfix found player inventory");
+            
+            if (__instance == null) return;
+            Plugin.inventoryUI = __instance as InventoryUI;
+            if (Plugin.inventoryUI == null)
+            {
+                return;
+            }
+        }
+    }
 
     private IEnumerator Start()
     {
         while (!StaticInstance<AsyncAssetLoading>.Instance.loadingDone) yield return new WaitForEndOfFrame();
-
-        ClearSlots();
 
         while (GameManager.Instance == null) yield return new WaitForEndOfFrame();
         while (GameManager.Instance.awaitingStartLevel) yield return new WaitForEndOfFrame();
@@ -118,6 +132,9 @@ public class Plugin : BaseUnityPlugin
     private IEnumerator SpawnWeapons()
     {
         if (weaponList.Count == 0) yield break;
+
+        ClearSlots();
+        ClearInventory();
 
         itHasBegun = true;
 
@@ -157,6 +174,12 @@ public class Plugin : BaseUnityPlugin
         SpawnHelper.GetItemInSlot(InventorySlot.PassiveEnhancement1)?.DropFromPlayer();
         SpawnHelper.GetItemInSlot(InventorySlot.PassiveEnhancement2)?.DropFromPlayer();
         SpawnHelper.GetItemInSlot(InventorySlot.PassiveEnhancement3)?.DropFromPlayer();
+    }
+    private static void ClearInventory()
+    {
+        if (Plugin.inventoryUI != null) {
+            Plugin.inventoryUI.bagSpaceItemGrid.RemoveAllItems();
+        }
     }
 
     private static void SaveItems(List<BaseDTO> weaponPropertyList)
