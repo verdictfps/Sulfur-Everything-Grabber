@@ -15,6 +15,7 @@ using System.Reflection;
 using PerfectRandom.Sulfur.Core.UI.Inventory;
 using PerfectRandom.Sulfur.Core.UI.ItemDescription;
 using UnityEngine.Pool;
+using System.Text.RegularExpressions;
 
 public class ValueHelpers
 {
@@ -268,10 +269,24 @@ public class ValueHelpers
         List<ItemDescriptionText> enchantmentList = (List<ItemDescriptionText>)enchantmentField.GetValue(itemDescription);
 
         List<string> descriptionStrings = [];
+
+        string pattern = @"(.*?)\((.*?)\/(.*?)\)(.*?)";
         
         if (attributesList != null) {
             foreach (var desc in attributesList)
             {
+                bool isTrue = Regex.IsMatch(desc.ToString(), pattern);
+                Debug.Log($"[ Mod: EverythingGrabber ] Regex result: {isTrue}");
+                if (isTrue == true) continue;
+                descriptionStrings.Add(desc.ToString());
+            }
+        }
+        if (descriptionList != null) {
+            foreach (var desc in descriptionList)
+            {
+                if (desc.ToString() == "Drag this item onto a weapon with an empty enchantment slot to enchant it.") continue;
+                if (desc.ToString() == "Enchantment") continue;
+                if (desc.ToString() == "Elemental enchantment") continue;
                 descriptionStrings.Add(desc.ToString());
             }
         }
@@ -284,15 +299,6 @@ public class ValueHelpers
         if (attachmentList != null) {
             foreach (var desc in attachmentList)
             {
-                descriptionStrings.Add(desc.ToString());
-            }
-        }
-        if (descriptionList != null) {
-            foreach (var desc in descriptionList)
-            {
-                if (desc.ToString() == "Drag this item onto a weapon with an empty enchantment slot to enchant it.") continue;
-                if (desc.ToString() == "Enchantment") continue;
-                if (desc.ToString() == "Elemental enchantment") continue;
                 descriptionStrings.Add(desc.ToString());
             }
         }
@@ -318,5 +324,27 @@ public class ValueHelpers
         {
             methodInfo.Invoke(itemDescription, null); 
         }
+    }
+    public int GetPriceBuy(InventoryItem item)
+    {
+        if (!item) return 0;
+        int priceBuyRaw = item.PriceBuy;
+        bool endsWithNine = (priceBuyRaw % 10 == 9);
+        if (endsWithNine == true)
+        {
+            priceBuyRaw += 1;
+        }
+        return priceBuyRaw;
+    }
+    public int GetPriceSell(InventoryItem item)
+    {
+        if (!item) return 0;
+        int priceSellRaw = item.PriceSell;
+        bool endsWithNine = (priceSellRaw % 10 == 9);
+        if (endsWithNine == true)
+        {
+            priceSellRaw += 1;
+        }
+        return priceSellRaw;
     }
 }

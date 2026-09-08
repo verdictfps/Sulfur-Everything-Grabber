@@ -28,20 +28,36 @@ namespace EverythingDataGrabber;
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 public class Plugin : BaseUnityPlugin
 {
+    // Logger(s)
     internal static new ManualLogSource Logger;
+
+    // Databases & their helpers
     CaliberType[] Caliberdatabase;
     List<ItemDefinition> itemDatabase;
     DatabaseGrabber grabber = new();
+
+    // Other stuff
+    public static InventoryUI inventoryUI { get; set; }
+    private static bool itHasBegun = false;
+
+    // Weapon fields
     private static List<ItemDefinition> weaponList = [];
     private static List<BaseDTO> weaponPropertyList = [];
+
+    // Enchantment fields
     private static List<ItemDefinition> enchantmentList = [];
     private static List<EnhancementDTO> oilList = [];
     private static List<EnhancementDTO> scrollList = [];
-    private static bool itHasBegun = false;
+
+    // Equipment fields
+    private static List<ItemDefinition> equipmentList = [];
+    private static List<EquipmentDTO> armorList = [];
+    private static List<EquipmentDTO> trinketList = [];
+
+    // Shortcut fields
     private ConfigEntry<KeyboardShortcut> GrabWeapons { get; set; }
     private ConfigEntry<KeyboardShortcut> GrabEnchantments { get; set; }
     private ConfigEntry<KeyboardShortcut> GrabEquipment { get; set; }
-    public static InventoryUI inventoryUI { get; set; }
 
     private void Awake()
     {
@@ -62,6 +78,10 @@ public class Plugin : BaseUnityPlugin
         if (GrabEnchantments.Value.IsDown())
         {
             StartCoroutine(SpawnEnchantments());
+        }
+        if (GrabEquipment.Value.IsDown())
+        {
+            StartCoroutine(SpawnEquipment());
         }
     }
 
@@ -136,7 +156,7 @@ public class Plugin : BaseUnityPlugin
                 Debug.Log("[ Mod: EverythingGrabber ] WHY WOULD MODIFIERS BE ZERO");
                 return;
             }
-            if (returnDTO.Name.Contains("Oil"))
+            if (returnDTO.name.Contains("Oil"))
             {
                 oilList.Add(returnDTO);
                 ImageHelpers.SaveBaseImageEnch(enchantment.itemDefinition, "Oils");
@@ -145,6 +165,85 @@ public class Plugin : BaseUnityPlugin
             {
                 scrollList.Add(returnDTO);
                 ImageHelpers.SaveBaseImageEnch(enchantment.itemDefinition, "Scrolls");
+            }
+            ClearInventory();
+        }
+    }
+
+    [HarmonyPatch(typeof(InventoryItem), "Start")]
+    public class EquipmentStatsInterceptor
+    {
+        static void Postfix(object __instance)
+        {
+            if (__instance == null) return;
+            InventoryItem equipment = __instance as InventoryItem;
+
+            if (!equipment) return;
+            if (equipment.itemDefinition.ItemType != ItemType.Armor && equipment.itemDefinition.ItemType != ItemType.Misc) return;
+            if (!equipment.itemDefinition.includedInEarlyAccess) return;
+            if (equipment.itemDefinition.modifiersOnEquipNew.Count == 0) return;
+
+            equipment.ModifyDurability(100);
+
+            Debug.Log("[ Mod: EverythingGrabber ] Postfix found an equipment item");
+
+            if (itHasBegun == false)
+            {
+                Debug.Log("[ Mod: EverythingGrabber ] idk why but ithasbegun is false");
+                return;
+            }
+            if (equipment == null)
+            {
+                Debug.Log("[ Mod: EverythingGrabber ] For some fucking reason equipment is null");
+                return;
+            }
+
+            var helper = new ValueHelpers();
+            List<EquipmentModifierDTO> returnDTO = EquipmentModifierDTO.GetEquipmentModifierDTO(equipment, helper);
+
+            if (returnDTO == null) 
+            { 
+                Debug.Log("[ Mod: EverythingGrabber ] ReturnDTO failed");
+                return;
+            }
+
+            InventoryUI enchUI = helper.GetInventoryUI(equipment);
+            enchUI.itemDescription.Setup(equipment);
+            
+            if (equipment.itemDefinition.ItemType == ItemType.Armor)
+            {
+                armorList.Add(new EquipmentDTO
+                {
+                    name = equipment.itemDefinition.LocalizedDisplayName,
+                    description = helper.GetDescriptionText(enchUI.itemDescription),
+                    flavorText = equipment.itemDefinition.LocalizedFlavor,
+                    type = "Armor",
+                    slotType = equipment.itemDefinition.slotType.ToString(),
+                    priceBuy = helper.GetPriceBuy(equipment),
+                    priceSell = helper.GetPriceSell(equipment),
+                    InventorySizeX = equipment.InventorySize.x,
+                    InventorySizeY = equipment.InventorySize.y,
+                    maxDurability = equipment.DurabilityMax,
+                    modifiersOnEquipNew = returnDTO
+                });
+                ImageHelpers.SaveBaseImageEquipment(equipment.itemDefinition, "Armor");
+            }
+            else
+            {
+                trinketList.Add(new EquipmentDTO
+                {
+                    name = equipment.itemDefinition.LocalizedDisplayName,
+                    description = helper.GetDescriptionText(enchUI.itemDescription),
+                    flavorText = equipment.itemDefinition.LocalizedFlavor,
+                    type = "Trinket",
+                    slotType = equipment.itemDefinition.slotType.ToString(),
+                    priceBuy = equipment.PriceBuy,
+                    priceSell = equipment.PriceSell,
+                    InventorySizeX = equipment.InventorySize.x,
+                    InventorySizeY = equipment.InventorySize.y,
+                    modifiersOnEquipNew = returnDTO
+                });
+                ImageHelpers.SaveBaseImageEquipment(equipment.itemDefinition, "Trinkets");
             }
             ClearInventory();
         }
@@ -165,7 +264,7 @@ public class Plugin : BaseUnityPlugin
             }
         }
     }
-
+    
     private IEnumerator Start()
     {
         Logger = base.Logger;
@@ -179,6 +278,7 @@ public class Plugin : BaseUnityPlugin
         itemDatabase = grabber.GetListOfItemDefinitions();
         Caliberdatabase = DatabaseGrabber.GetCaliberDatabase();
 
+        // Build weapon database list
         foreach (var itemDef in itemDatabase)
         {
             if (itemDef?.slotType != SlotType.Weapon & itemDef?.slotType != SlotType.BasicMelee & itemDef?.slotType != SlotType.Gadget) continue;
@@ -190,6 +290,8 @@ public class Plugin : BaseUnityPlugin
             weaponSO?.alwaysSpawnWithFullDurability = true;
             weaponList.Add(weaponSO);
         }
+
+        // Build enchantment database list
         foreach (var itemDef in itemDatabase)
         {
             if (itemDef?.ItemType != ItemType.Enchantment) continue;
@@ -198,8 +300,19 @@ public class Plugin : BaseUnityPlugin
 
             enchantmentList.Add(itemDef);
         }
-    }
 
+        // Build equipment database list
+        foreach (var itemDef in itemDatabase)
+        {
+            if (!itemDef) continue;
+            if (itemDef.ItemType != ItemType.Armor && itemDef.ItemType != ItemType.Misc) continue;
+            if (!itemDef.includedInEarlyAccess) continue;
+            if (itemDef.modifiersOnEquipNew.Count == 0) continue;
+
+            itemDef?.alwaysSpawnWithFullDurability = true;
+            equipmentList.Add(itemDef);
+        }
+    }
     private IEnumerator SpawnWeapons()
     {
         if (weaponList.Count == 0) yield break;
@@ -232,7 +345,6 @@ public class Plugin : BaseUnityPlugin
 
         itHasBegun = false;
     }
-
     private IEnumerator SpawnEnchantments()
     {
         if (enchantmentList.Count == 0) yield break;
@@ -253,7 +365,26 @@ public class Plugin : BaseUnityPlugin
         SaveEnchantments();
         itHasBegun = false;
     }
+    private IEnumerator SpawnEquipment()
+    {
+        if (enchantmentList.Count == 0) yield break;
+        
+        ClearSlots();
+        ClearInventory();
 
+        itHasBegun = true;
+
+        foreach (var equipment in equipmentList)
+        {
+            InventorySlot slot = SpawnHelper.ToInventorySlot(equipment.slotType);
+            StaticInstance<DevToolsManager>.Instance.SpawnToInventory(equipment);
+
+            yield return null;
+        }
+
+        SaveEquipment();
+        itHasBegun = false;
+    }
     private static void ClearSlots()
     {
         SpawnHelper.GetItemInSlot(InventorySlot.Weapon0)?.DropFromPlayer();
@@ -319,6 +450,31 @@ public class Plugin : BaseUnityPlugin
         string folderPath2 = Path.Combine(rootDir2, "Extracted Data\\Scrolls\\");
         Directory.CreateDirectory(folderPath2);
         string path2 = Path.Combine(folderPath2, "scrolls.json");
+        File.WriteAllText(path2, json2);
+    }
+
+    private static void SaveEquipment()
+    {
+        JsonSerializerSettings settings = new JsonSerializerSettings
+        {
+            ContractResolver = new IgnoreUnchangedDefaultsResolver(),
+            NullValueHandling = NullValueHandling.Ignore,
+            DefaultValueHandling = DefaultValueHandling.Ignore,
+            Formatting = Formatting.Indented
+        };
+
+        string json = JsonConvert.SerializeObject(armorList, settings);
+        string rootDir = Paths.GameRootPath;
+        string folderPath = Path.Combine(rootDir, "Extracted Data\\Armor\\");
+        Directory.CreateDirectory(folderPath);
+        string path = Path.Combine(folderPath, "armor.json");
+        File.WriteAllText(path, json);
+
+        string json2 = JsonConvert.SerializeObject(trinketList, settings);
+        string rootDir2 = Paths.GameRootPath;
+        string folderPath2 = Path.Combine(rootDir2, "Extracted Data\\Trinkets\\");
+        Directory.CreateDirectory(folderPath2);
+        string path2 = Path.Combine(folderPath2, "trinkets.json");
         File.WriteAllText(path2, json2);
     }
 
