@@ -61,8 +61,8 @@ public class CoreDTO : BaseDTO
             caliberSpread = helpers.GetCaliberSpread(weapon.weaponDefinition.spreadPerCaliber),
             caliberRecoil = helpers.GetCaliberRecoil(weapon.weaponDefinition.kickPower),
             computedSpread = weapon.computedSpread,
-            priceBuy = weapon.inventoryItem.PriceBuy,
-            priceSell = weapon.inventoryItem.PriceSell,
+            priceBuy = helpers.GetPriceBuy(weapon.inventoryItem),
+            priceSell = helpers.GetPriceSell(weapon.inventoryItem),
             RunSpeedModifier = Math.Round(helpers.GetRunSpeedMod(weapon).Value, 2),
             CompatibleAttachments = helpers.GetCompatibleAttachments(weapon),
             KnockbackForceMultiplier = weapon.KnockbackForceMultiplier

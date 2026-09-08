@@ -13,17 +13,21 @@ using PerfectRandom.Sulfur.Core.UI.Inventory;
 [Serializable]
 public class EnhancementDTO
 {
-    public string Name;
-    public List<string> Description;
-    public List<ModifierDTO> modifiers;
+    public string name;
+    public List<string> description;
+    public int priceBuy;
+    public int priceSell;
+    public int InventorySizeX;
+    public int InventorySizeY;
+    public List<EnchantmentModifierDTO> modifiers;
     public static EnhancementDTO GetEnhancementDTO(InventoryItem enchantment, ValueHelpers helpers)
     {   
         var enhancement = AssetAccess.GetAsset(enchantment.itemDefinition.appliesEnchantment);
-        List<ModifierDTO> itemModifiers = new();
+        List<EnchantmentModifierDTO> itemModifiers = new();
         foreach (var mod in enhancement.modifiersApplied)
         {
             var attributeExpanded = AssetAccess.GetAsset(mod.attribute);
-            itemModifiers.Add(new ModifierDTO
+            itemModifiers.Add(new EnchantmentModifierDTO
             { 
                 modifierName = mod.attribute.ToString(),
                 statModType = helpers.FromStatModTypeToString(mod.modType),
@@ -58,8 +62,12 @@ public class EnhancementDTO
 
         return new EnhancementDTO
         {
-            Name = enchantment.itemDefinition.LocalizedDisplayName,
-            Description = helpers.GetDescriptionText(enchUI.itemDescription),
+            name = enchantment.itemDefinition.LocalizedDisplayName,
+            description = helpers.GetDescriptionText(enchUI.itemDescription),
+            priceBuy = enchantment.PriceBuy,
+            priceSell = enchantment.PriceSell,
+            InventorySizeX = enchantment.InventorySize.x,
+            InventorySizeY = enchantment.InventorySize.y,
             modifiers = itemModifiers
         };
         
@@ -67,7 +75,7 @@ public class EnhancementDTO
 }
 
 [Serializable]
-public class ModifierDTO
+public class EnchantmentModifierDTO
 {
     public string modifierName;
     public string statModType;

@@ -33,6 +33,19 @@ public class ImageHelpers {
         string outputPath = Path.Combine(folderPath, $"{name.ToLower().Replace(" ", "_")}.png");
         File.WriteAllBytes(outputPath, pngBytes);
     }
+    public static void SaveBaseImageEquipment(ItemDefinition item, string type)
+    {
+        byte[] pngBytes = ImageConversion.EncodeToPNG(MakeTextureReadable(item.artwork.texture));
+
+        string name = Regex.Replace(item.LocalizedDisplayName, @"[^a-zA-Z0-9\s\(\)\[\]\-]", "");
+        
+        string rootDir = Paths.GameRootPath;
+        string folderPath = Path.Combine(rootDir, $"Extracted Data\\{type}\\Images\\");
+        Directory.CreateDirectory(folderPath);
+
+        string outputPath = Path.Combine(folderPath, $"{name.ToLower().Replace(" ", "_")}.png");
+        File.WriteAllBytes(outputPath, pngBytes);
+    }
 
     public static Texture2D MakeTextureReadable(Texture2D source)
     {
