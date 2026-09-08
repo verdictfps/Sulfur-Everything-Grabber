@@ -1,5 +1,6 @@
 using System.IO;
 using BepInEx;
+using PerfectRandom.Sulfur.Core.Items;
 using PerfectRandom.Sulfur.Core.Weapons;
 using UnityEngine;
 using System.Text.RegularExpressions;
@@ -7,13 +8,26 @@ using System.Text.RegularExpressions;
 public class ImageHelpers {
 
     // .............this was a rabbit hole.
-    public static void SaveBaseImage(Weapon weapon, BaseDTO returnDTO)
+    public static void SaveBaseImageWeapon(Weapon weapon, BaseDTO returnDTO)
     {
         byte[] pngBytes = ImageConversion.EncodeToPNG(MakeTextureReadable(weapon.ItemDefinition.artwork.texture));
 
         string name = Regex.Replace(returnDTO.Name, @"[^a-zA-Z0-9\s\(\)\[\]\-]", "");
         string rootDir = Paths.GameRootPath;
         string folderPath = Path.Combine(rootDir, "Extracted Data\\Weapons\\Images\\");
+        Directory.CreateDirectory(folderPath);
+
+        string outputPath = Path.Combine(folderPath, $"{name.ToLower().Replace(" ", "_")}.png");
+        File.WriteAllBytes(outputPath, pngBytes);
+    }
+    public static void SaveBaseImageEnch(ItemDefinition item, string type)
+    {
+        byte[] pngBytes = ImageConversion.EncodeToPNG(MakeTextureReadable(item.artwork.texture));
+
+        string name = Regex.Replace(item.LocalizedDisplayName, @"[^a-zA-Z0-9\s\(\)\[\]\-]", "");
+        
+        string rootDir = Paths.GameRootPath;
+        string folderPath = Path.Combine(rootDir, $"Extracted Data\\{type}\\Images\\");
         Directory.CreateDirectory(folderPath);
 
         string outputPath = Path.Combine(folderPath, $"{name.ToLower().Replace(" ", "_")}.png");

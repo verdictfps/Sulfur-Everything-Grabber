@@ -89,6 +89,7 @@ static class SpawnHelper
         SlotType.Gadget => InventorySlot.Gadget0,
         SlotType.Weapon => InventorySlot.Weapon0,
         SlotType.BasicMelee => InventorySlot.BasicMelee,
+        SlotType.None => InventorySlot.None,
         _ => throw new NotImplementedException(nameof(slotType))
     };
 
