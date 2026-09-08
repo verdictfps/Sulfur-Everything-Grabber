@@ -54,10 +54,14 @@ public class Plugin : BaseUnityPlugin
     private static List<EquipmentDTO> armorList = [];
     private static List<EquipmentDTO> trinketList = [];
 
+    // Attachment fields
+    private static List<ItemDefinition> attachmentList = [];
+
     // Shortcut fields
     private ConfigEntry<KeyboardShortcut> GrabWeapons { get; set; }
     private ConfigEntry<KeyboardShortcut> GrabEnchantments { get; set; }
     private ConfigEntry<KeyboardShortcut> GrabEquipment { get; set; }
+    private ConfigEntry<KeyboardShortcut> GrabAttachments { get; set; }
 
     private void Awake()
     {
@@ -66,6 +70,7 @@ public class Plugin : BaseUnityPlugin
         GrabWeapons = Config.Bind("Hotkeys", "Start Weapon Grabbing", new KeyboardShortcut(KeyCode.U, KeyCode.LeftShift));
         GrabEnchantments = Config.Bind("Hotkeys", "Start Enchantment Grabbing", new KeyboardShortcut(KeyCode.I, KeyCode.LeftShift));
         GrabEquipment = Config.Bind("Hotkeys", "Start Equipment Grabbing", new KeyboardShortcut(KeyCode.O, KeyCode.LeftShift));
+        GrabAttachments = Config.Bind("Hotkeys", "Start Attachment Grabbing", new KeyboardShortcut(KeyCode.P, KeyCode.LeftShift));
         Debug.Log("[ Mod: EverythingGrabber ] Plugin loaded successfully");
     }
 
