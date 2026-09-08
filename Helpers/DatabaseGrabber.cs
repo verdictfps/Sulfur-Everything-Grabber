@@ -7,13 +7,13 @@ class DatabaseGrabber
 {
     public List<ItemDefinition> GetListOfItemDefinitions()
     {
-        var weaponDatabase = StaticInstance<AsyncAssetLoading>.Instance.itemDatabase.GetRawList();
-        if (weaponDatabase == null)
+        var database = StaticInstance<AsyncAssetLoading>.Instance.itemDatabase.GetRawList();
+        if (database == null)
         {
-            throw new ArgumentNullException(nameof(weaponDatabase));
+            throw new ArgumentNullException(nameof(database));
         }
 
-        return weaponDatabase;
+        return database;
     }
 
     public static CaliberType[] GetCaliberDatabase()

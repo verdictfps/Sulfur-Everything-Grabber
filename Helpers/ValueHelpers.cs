@@ -12,6 +12,9 @@ using PerfectRandom.Sulfur.Core.Items;
 using PerfectRandom.Sulfur.Core.Weapons;
 using UnityEngine;
 using System.Reflection;
+using PerfectRandom.Sulfur.Core.UI.Inventory;
+using PerfectRandom.Sulfur.Core.UI.ItemDescription;
+using UnityEngine.Pool;
 
 public class ValueHelpers
 {
@@ -192,5 +195,128 @@ public class ValueHelpers
         {
             return false;
         } 
+    }
+    public string FromStatModTypeToString(StatModType modtype) => modtype switch
+    {
+        StatModType.Flat        => "Flat",
+        StatModType.PercentAdd  => "PercentAdd",
+        StatModType.PercentMult => "PercentMult",
+        _ => throw new ArgumentOutOfRangeException(nameof(modtype), $"Not expected direction value: {modtype}"),
+    };
+
+    public ProjectileDTO GetProjDTO(ProjectileEffectDefinition projEffectDefinition)
+    {
+        if (!projEffectDefinition)
+        {
+            return null;
+        }
+        return new ProjectileDTO
+        {
+            drawDefaultBullet = projEffectDefinition.drawDefaultBullet,
+            mainColor = projEffectDefinition.mainColor.ToString(),
+            coreColor = projEffectDefinition.coreColor.ToString(),
+            playImpactSounds = projEffectDefinition.playImpactSounds,
+            soundShotSilencedVolumeDb = projEffectDefinition.soundShotSilencedVolumeDb,
+            innerBeamWidth = projEffectDefinition.innerBeamWidth,
+            outerBeamWidth = projEffectDefinition.outerBeamWidth
+        };
+    }
+    
+    public EffectSpawnDTO GetEffectSpawnDTO(EffectSpawnEntry effect)
+    {
+        if (!effect.effect)
+        {
+            return null;
+        }
+        return new EffectSpawnDTO
+        {
+            effect = effect?.effect?.ToString() ?? "",
+            procChance = effect.procChance
+        };
+    }
+
+    public InventoryUI GetInventoryUI(InventoryItem enchantment)
+    {
+        Type targetType = enchantment.GetType();
+        FieldInfo fieldInfo = targetType.GetField("inventoryUI", 
+            BindingFlags.NonPublic | BindingFlags.Instance);
+
+        if (fieldInfo != null)
+        {
+            return (InventoryUI)fieldInfo.GetValue(enchantment);
+        }
+        else
+        {
+            return null;
+        } 
+    }
+    public List<string> GetDescriptionText(ItemDescription itemDescription)
+    {
+        Type targetType = itemDescription.GetType();
+        FieldInfo attributesField = targetType.GetField("attributesInUse", 
+            BindingFlags.NonPublic | BindingFlags.Instance);
+        FieldInfo descriptionField = targetType.GetField("descriptionTextInUse", 
+            BindingFlags.NonPublic | BindingFlags.Instance);
+        FieldInfo attachmentField = targetType.GetField("attachmentInUse", 
+            BindingFlags.NonPublic | BindingFlags.Instance);
+        FieldInfo enchantmentField = targetType.GetField("enchantmentInUse", 
+            BindingFlags.NonPublic | BindingFlags.Instance);
+
+        List<ItemDescriptionAttribute> attributesList = (List<ItemDescriptionAttribute>)attributesField.GetValue(itemDescription);
+        List<ItemDescriptionText> descriptionList = (List<ItemDescriptionText>)descriptionField.GetValue(itemDescription);
+        List<ItemDescriptionText> attachmentList = (List<ItemDescriptionText>)attachmentField.GetValue(itemDescription);
+        List<ItemDescriptionText> enchantmentList = (List<ItemDescriptionText>)enchantmentField.GetValue(itemDescription);
+
+        List<string> descriptionStrings = [];
+        
+        if (attributesList != null) {
+            foreach (var desc in attributesList)
+            {
+                descriptionStrings.Add(desc.ToString());
+            }
+        }
+        if (enchantmentList != null) {
+            foreach (var desc in enchantmentList)
+            {
+                descriptionStrings.Add(desc.ToString());
+            }
+        }
+        if (attachmentList != null) {
+            foreach (var desc in attachmentList)
+            {
+                descriptionStrings.Add(desc.ToString());
+            }
+        }
+        if (descriptionList != null) {
+            foreach (var desc in descriptionList)
+            {
+                if (desc.ToString() == "Drag this item onto a weapon with an empty enchantment slot to enchant it.") continue;
+                if (desc.ToString() == "Enchantment") continue;
+                if (desc.ToString() == "Elemental enchantment") continue;
+                descriptionStrings.Add(desc.ToString());
+            }
+        }
+
+        ClearDescriptionText(itemDescription);
+
+        if (descriptionStrings != null)
+        {
+            return descriptionStrings;
+        }
+        else
+        {
+            return null;
+        } 
+    }
+    public void ClearDescriptionText(ItemDescription itemDescription)
+    {
+        Type targetType = itemDescription.GetType();
+        MethodInfo methodInfo = targetType.GetMethod("ClearDescription", 
+            BindingFlags.NonPublic | BindingFlags.Instance);
+
+        if (methodInfo != null)
+        {
+            methodInfo.Invoke(itemDescription, null); 
+        }
     }
 }
