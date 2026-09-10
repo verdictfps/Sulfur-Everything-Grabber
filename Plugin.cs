@@ -56,6 +56,7 @@ public class Plugin : BaseUnityPlugin
 
     // Attachment fields
     private static List<ItemDefinition> attachmentList = [];
+    private static List<AttachmentDTO> attachmentPropertyList = [];
 
     // Shortcut fields
     private ConfigEntry<KeyboardShortcut> GrabWeapons { get; set; }
@@ -87,6 +88,10 @@ public class Plugin : BaseUnityPlugin
         if (GrabEquipment.Value.IsDown())
         {
             StartCoroutine(SpawnEquipment());
+        }
+        if (GrabAttachments.Value.IsDown())
+        {
+            StartCoroutine(SpawnAttachments());
         }
     }
 
@@ -164,17 +169,16 @@ public class Plugin : BaseUnityPlugin
             if (returnDTO.name.Contains("Oil"))
             {
                 oilList.Add(returnDTO);
-                ImageHelpers.SaveBaseImageEnch(enchantment.itemDefinition, "Oils");
+                ImageHelpers.SaveBaseImage(enchantment.itemDefinition, "Oils");
             }
             else
             {
                 scrollList.Add(returnDTO);
-                ImageHelpers.SaveBaseImageEnch(enchantment.itemDefinition, "Scrolls");
+                ImageHelpers.SaveBaseImage(enchantment.itemDefinition, "Scrolls");
             }
             ClearInventory();
         }
     }
-
     [HarmonyPatch(typeof(InventoryItem), "Start")]
     public class EquipmentStatsInterceptor
     {
@@ -231,7 +235,7 @@ public class Plugin : BaseUnityPlugin
                     maxDurability = equipment.DurabilityMax,
                     modifiersOnEquipNew = returnDTO
                 });
-                ImageHelpers.SaveBaseImageEquipment(equipment.itemDefinition, "Armor");
+                ImageHelpers.SaveBaseImage(equipment.itemDefinition, "Armor");
             }
             else
             {
@@ -248,11 +252,57 @@ public class Plugin : BaseUnityPlugin
                     InventorySizeY = equipment.InventorySize.y,
                     modifiersOnEquipNew = returnDTO
                 });
-                ImageHelpers.SaveBaseImageEquipment(equipment.itemDefinition, "Trinkets");
+                ImageHelpers.SaveBaseImage(equipment.itemDefinition, "Trinkets");
             }
             ClearInventory();
         }
     }
+    [HarmonyPatch(typeof(InventoryItem), "Start")]
+    public class AttachmentStatsInterceptor
+    {
+        static void Postfix(object __instance)
+        {
+            if (__instance == null) return;
+            InventoryItem attachment = __instance as InventoryItem;
+            
+            if (attachment?.itemDefinition?.ItemType != ItemType.Attachment) return;
+            if (!attachment.itemDefinition.includedInEarlyAccess) return;
+            if (attachment.itemDefinition.LocalizedDisplayName.StartsWith("Test")) return;
+
+            Debug.Log("[ Mod: EverythingGrabber ] Postfix found an attachment");
+
+            if (itHasBegun == false)
+            {
+                Debug.Log("[ Mod: EverythingGrabber ] idk why but ithasbegun is false");
+                return;
+            }
+            if (attachment == null)
+            {
+                Debug.Log("[ Mod: EverythingGrabber ] For some fucking reason attachment is null");
+                return;
+            }
+
+            var helper = new ValueHelpers();
+            AttachmentDTO returnDTO = AttachmentDTO.GetAttachmentDTO(attachment, helper);
+
+            if (returnDTO == null) 
+            { 
+                Debug.Log("[ Mod: EverythingGrabber ] ReturnDTO failed");
+                return;
+            }
+            if (returnDTO.modifiers.Count == 0) 
+            {
+                Debug.Log("[ Mod: EverythingGrabber ] WHY WOULD MODIFIERS BE ZERO");
+                return;
+            }
+
+            attachmentPropertyList.Add(returnDTO);
+            ImageHelpers.SaveBaseImage(attachment.itemDefinition, "Attachments");
+            
+            ClearInventory();
+        }
+    }
+
 
     [HarmonyPatch(typeof(InventoryUI), "Start")]
     public class InventoryInterceptor
@@ -317,6 +367,16 @@ public class Plugin : BaseUnityPlugin
             itemDef?.alwaysSpawnWithFullDurability = true;
             equipmentList.Add(itemDef);
         }
+
+        // Build attachment database list
+        foreach (var itemDef in itemDatabase)
+        {
+            if (itemDef?.ItemType != ItemType.Attachment) continue;
+            if (!itemDef.includedInEarlyAccess) continue;
+            if (itemDef.LocalizedDisplayName.StartsWith("Test")) continue;
+
+            attachmentList.Add(itemDef);
+        }
     }
     private IEnumerator SpawnWeapons()
     {
@@ -367,12 +427,33 @@ public class Plugin : BaseUnityPlugin
             yield return null;
         }
 
-        SaveEnchantments();
+        SaveData("Oils", oilList);
+        SaveData("Scrolls", scrollList);
+        itHasBegun = false;
+    }
+    private IEnumerator SpawnAttachments()
+    {
+        if (attachmentList.Count == 0) yield break;
+        
+        ClearSlots();
+        ClearInventory();
+
+        itHasBegun = true;
+
+        foreach (var attachment in attachmentList)
+        {
+            InventorySlot slot = SpawnHelper.ToInventorySlot(attachment.slotType);
+            StaticInstance<DevToolsManager>.Instance.SpawnToInventory(attachment);
+
+            yield return null;
+        }
+
+        SaveData("Attachments", attachmentPropertyList);
         itHasBegun = false;
     }
     private IEnumerator SpawnEquipment()
     {
-        if (enchantmentList.Count == 0) yield break;
+        if (equipmentList.Count == 0) yield break;
         
         ClearSlots();
         ClearInventory();
@@ -387,7 +468,8 @@ public class Plugin : BaseUnityPlugin
             yield return null;
         }
 
-        SaveEquipment();
+        SaveData("Armor", armorList);
+        SaveData("Trinkets", trinketList);
         itHasBegun = false;
     }
     private static void ClearSlots()
@@ -458,7 +540,7 @@ public class Plugin : BaseUnityPlugin
         File.WriteAllText(path2, json2);
     }
 
-    private static void SaveEquipment()
+    private static void SaveData<T>(string type, List<T> items)
     {
         JsonSerializerSettings settings = new JsonSerializerSettings
         {
@@ -468,11 +550,11 @@ public class Plugin : BaseUnityPlugin
             Formatting = Formatting.Indented
         };
 
-        string json = JsonConvert.SerializeObject(armorList, settings);
+        string json = JsonConvert.SerializeObject(items, settings);
         string rootDir = Paths.GameRootPath;
-        string folderPath = Path.Combine(rootDir, "Extracted Data\\Armor\\");
+        string folderPath = Path.Combine(rootDir, $"Extracted Data\\{type}\\");
         Directory.CreateDirectory(folderPath);
-        string path = Path.Combine(folderPath, "armor.json");
+        string path = Path.Combine(folderPath, $"{type.ToLower()}.json");
         File.WriteAllText(path, json);
 
         string json2 = JsonConvert.SerializeObject(trinketList, settings);

@@ -92,15 +92,30 @@ public class ValueHelpers
             return 0f;
         } 
     }
-    public List<string> GetCompatibleAttachments(Weapon weapon)
+    /*public List<string> GetCompatibleAttachments(Weapon weapon)
     {
-        Type targetType = weapon.GetType();
-        MethodInfo methodInfo = targetType.GetMethod("GetCompatibleAttachments", 
+        Type targetType = weapon.inventoryItem.GetType();
+        MethodInfo methodInfo = targetType.GetMethod("compatibleAttachments", 
             BindingFlags.NonPublic | BindingFlags.Instance);
 
         if (methodInfo != null)
         {
             return IterateCompatibleAttachments(methodInfo.Invoke(weapon, null) as List<ItemDefinition>); 
+        }
+        else
+        {
+            return null;
+        } 
+    }*/
+    public List<string> GetCompatibleAttachments(Weapon weapon)
+    {
+        Type targetType = weapon.inventoryItem.GetType();
+        FieldInfo fieldInfo = targetType.GetField("compatibleAttachments", 
+            BindingFlags.NonPublic | BindingFlags.Instance);
+
+        if (fieldInfo != null)
+        {
+            return IterateCompatibleAttachments((List<ItemDefinition>)fieldInfo.GetValue(weapon.inventoryItem));
         }
         else
         {
@@ -222,6 +237,23 @@ public class ValueHelpers
             outerBeamWidth = projEffectDefinition.outerBeamWidth
         };
     }
+    public AttachmentProjectileDTO GetAttProjDTO(ProjectileEffectDefinition projEffectDefinition)
+    {
+        if (!projEffectDefinition)
+        {
+            return null;
+        }
+        return new AttachmentProjectileDTO
+        {
+            drawDefaultBullet = projEffectDefinition.drawDefaultBullet,
+            mainColor = projEffectDefinition.mainColor.ToString(),
+            coreColor = projEffectDefinition.coreColor.ToString(),
+            playImpactSounds = projEffectDefinition.playImpactSounds,
+            soundShotSilencedVolumeDb = projEffectDefinition.soundShotSilencedVolumeDb,
+            innerBeamWidth = projEffectDefinition.innerBeamWidth,
+            outerBeamWidth = projEffectDefinition.outerBeamWidth
+        };
+    }
     
     public EffectSpawnDTO GetEffectSpawnDTO(EffectSpawnEntry effect)
     {
@@ -230,6 +262,18 @@ public class ValueHelpers
             return null;
         }
         return new EffectSpawnDTO
+        {
+            effect = effect?.effect?.ToString() ?? "",
+            procChance = effect.procChance
+        };
+    }
+    public AttachmentEffectSpawnDTO GetAttachmentEffectSpawnDTO(EffectSpawnEntry effect)
+    {
+        if (!effect.effect)
+        {
+            return null;
+        }
+        return new AttachmentEffectSpawnDTO
         {
             effect = effect?.effect?.ToString() ?? "",
             procChance = effect.procChance
