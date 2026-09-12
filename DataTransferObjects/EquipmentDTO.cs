@@ -15,6 +15,7 @@ using PerfectRandom.Sulfur.Core.UI.Inventory;
 public class EquipmentDTO
 {
     public string name;
+    public ItemId id;
     public List<string> description;
     public string flavorText;
     public string type;

@@ -11,6 +11,7 @@ public class MeleeDTO : BaseDTO
         return new MeleeDTO
         {
             Name = weapon.weaponDefinition.LocalizedDisplayName,
+            id = weapon.weaponDefinition.id,
             LocalizedFlavor = weapon.weaponDefinition.LocalizedFlavor,
             Core = CoreDTO.SetCoreMeleeStats(weapon, helpers),
             Modifiable = modifiableHelper.GetModifiableStats(weapon),
