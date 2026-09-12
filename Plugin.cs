@@ -58,11 +58,16 @@ public class Plugin : BaseUnityPlugin
     private static List<ItemDefinition> attachmentList = [];
     private static List<AttachmentDTO> attachmentPropertyList = [];
 
+    // Chamber fields
+    private static List<ItemDefinition> chamberList = [];
+    private static List<AttachmentDTO> chamberPropertyList = [];
+
     // Shortcut fields
     private ConfigEntry<KeyboardShortcut> GrabWeapons { get; set; }
     private ConfigEntry<KeyboardShortcut> GrabEnchantments { get; set; }
     private ConfigEntry<KeyboardShortcut> GrabEquipment { get; set; }
     private ConfigEntry<KeyboardShortcut> GrabAttachments { get; set; }
+    private ConfigEntry<KeyboardShortcut> GrabChambers { get; set; }
 
     private void Awake()
     {
@@ -72,6 +77,7 @@ public class Plugin : BaseUnityPlugin
         GrabEnchantments = Config.Bind("Hotkeys", "Start Enchantment Grabbing", new KeyboardShortcut(KeyCode.I, KeyCode.LeftShift));
         GrabEquipment = Config.Bind("Hotkeys", "Start Equipment Grabbing", new KeyboardShortcut(KeyCode.O, KeyCode.LeftShift));
         GrabAttachments = Config.Bind("Hotkeys", "Start Attachment Grabbing", new KeyboardShortcut(KeyCode.P, KeyCode.LeftShift));
+        GrabChambers = Config.Bind("Hotkeys", "Start Attachment Grabbing", new KeyboardShortcut(KeyCode.J, KeyCode.LeftShift));
         Debug.Log("[ Mod: EverythingGrabber ] Plugin loaded successfully");
     }
 
@@ -92,6 +98,10 @@ public class Plugin : BaseUnityPlugin
         if (GrabAttachments.Value.IsDown())
         {
             StartCoroutine(SpawnAttachments());
+        }
+        if (GrabChambers.Value.IsDown())
+        {
+            StartCoroutine(SpawnChambers());
         }
     }
 
@@ -266,7 +276,6 @@ public class Plugin : BaseUnityPlugin
             InventoryItem attachment = __instance as InventoryItem;
             
             if (attachment?.itemDefinition?.ItemType != ItemType.Attachment) return;
-            if (!attachment.itemDefinition.includedInEarlyAccess) return;
             if (attachment.itemDefinition.LocalizedDisplayName.StartsWith("Test")) return;
 
             Debug.Log("[ Mod: EverythingGrabber ] Postfix found an attachment");
@@ -298,6 +307,50 @@ public class Plugin : BaseUnityPlugin
 
             attachmentPropertyList.Add(returnDTO);
             ImageHelpers.SaveBaseImage(attachment.itemDefinition, "Attachments");
+            
+            ClearInventory();
+        }
+    }
+    [HarmonyPatch(typeof(InventoryItem), "Start")]
+    public class ChamberStatsInterceptor
+    {
+        static void Postfix(object __instance)
+        {
+            if (__instance == null) return;
+            InventoryItem chamber = __instance as InventoryItem;
+            
+            if (!chamber.itemDefinition.LocalizedDisplayName.Contains("Chamber Chisel")) return;
+            if (chamber.itemDefinition.LocalizedDisplayName.StartsWith("Test")) return;
+
+            Debug.Log("[ Mod: EverythingGrabber ] Postfix found a chamber");
+
+            if (itHasBegun == false)
+            {
+                Debug.Log("[ Mod: EverythingGrabber ] idk why but ithasbegun is false");
+                return;
+            }
+            if (chamber == null)
+            {
+                Debug.Log("[ Mod: EverythingGrabber ] For some fucking reason attachment is null");
+                return;
+            }
+
+            var helper = new ValueHelpers();
+            AttachmentDTO returnDTO = AttachmentDTO.GetAttachmentDTO(chamber, helper);
+
+            if (returnDTO == null) 
+            { 
+                Debug.Log("[ Mod: EverythingGrabber ] ReturnDTO failed");
+                return;
+            }
+            if (returnDTO.modifiers.Count == 0) 
+            {
+                Debug.Log("[ Mod: EverythingGrabber ] WHY WOULD MODIFIERS BE ZERO");
+                return;
+            }
+
+            attachmentPropertyList.Add(returnDTO);
+            ImageHelpers.SaveBaseImage(chamber.itemDefinition, "Chambers");
             
             ClearInventory();
         }
@@ -377,6 +430,15 @@ public class Plugin : BaseUnityPlugin
 
             attachmentList.Add(itemDef);
         }
+
+        // Build chamber database list
+        foreach (var itemDef in itemDatabase)
+        {
+            if (!itemDef) continue;
+            if (!itemDef.LocalizedDisplayName.Contains("Chamber Chisel")) continue;
+            
+            chamberList.Add(itemDef);
+        }
     }
     private IEnumerator SpawnWeapons()
     {
@@ -427,6 +489,9 @@ public class Plugin : BaseUnityPlugin
             yield return null;
         }
 
+        // SpawnToInventory adds items with a variable delay, so wait until the postfixes stop catching new ones.
+        yield return WaitForListToSettle(() => oilList.Count + scrollList.Count);
+
         SaveData("Oils", oilList);
         SaveData("Scrolls", scrollList);
         itHasBegun = false;
@@ -448,7 +513,33 @@ public class Plugin : BaseUnityPlugin
             yield return null;
         }
 
+        // SpawnToInventory adds items with a variable delay, so wait until the postfixes stop catching new ones.
+        yield return WaitForListToSettle(() => attachmentPropertyList.Count);
+
         SaveData("Attachments", attachmentPropertyList);
+        itHasBegun = false;
+    }
+    private IEnumerator SpawnChambers()
+    {
+        if (chamberList.Count == 0) yield break;
+        
+        ClearSlots();
+        ClearInventory();
+
+        itHasBegun = true;
+
+        foreach (var chamber in chamberList)
+        {
+            InventorySlot slot = SpawnHelper.ToInventorySlot(chamber.slotType);
+            StaticInstance<DevToolsManager>.Instance.SpawnToInventory(chamber);
+
+            yield return null;
+        }
+
+        // SpawnToInventory adds items with a variable delay, so wait until the postfixes stop catching new ones.
+        yield return WaitForListToSettle(() => attachmentPropertyList.Count);
+
+        SaveData("Chambers", chamberPropertyList);
         itHasBegun = false;
     }
     private IEnumerator SpawnEquipment()
@@ -468,9 +559,34 @@ public class Plugin : BaseUnityPlugin
             yield return null;
         }
 
+        // SpawnToInventory adds items with a variable delay, so wait until the postfixes stop catching new ones.
+        yield return WaitForListToSettle(() => armorList.Count + trinketList.Count);
+
         SaveData("Armor", armorList);
         SaveData("Trinkets", trinketList);
         itHasBegun = false;
+    }
+    private static IEnumerator WaitForListToSettle(Func<int> getCount, int settleFrames = 60, int maxFrames = 1800)
+    {
+        int lastCount = -1;
+        int stableFrames = 0;
+        int totalFrames = 0;
+
+        while (stableFrames < settleFrames && totalFrames < maxFrames)
+        {
+            int currentCount = getCount();
+            if (currentCount == lastCount)
+            {
+                stableFrames++;
+            }
+            else
+            {
+                lastCount = currentCount;
+                stableFrames = 0;
+            }
+            totalFrames++;
+            yield return null;
+        }
     }
     private static void ClearSlots()
     {

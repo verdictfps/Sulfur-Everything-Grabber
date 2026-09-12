@@ -320,7 +320,6 @@ public class ValueHelpers
             foreach (var desc in attributesList)
             {
                 bool isTrue = Regex.IsMatch(desc.ToString(), pattern);
-                Debug.Log($"[ Mod: EverythingGrabber ] Regex result: {isTrue}");
                 if (isTrue == true) continue;
                 descriptionStrings.Add(desc.ToString());
             }
@@ -331,6 +330,7 @@ public class ValueHelpers
                 if (desc.ToString() == "Drag this item onto a weapon with an empty enchantment slot to enchant it.") continue;
                 if (desc.ToString() == "Enchantment") continue;
                 if (desc.ToString() == "Elemental enchantment") continue;
+                if (desc.ToString() == "Attachment ") continue;
                 descriptionStrings.Add(desc.ToString());
             }
         }
