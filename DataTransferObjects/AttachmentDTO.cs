@@ -16,6 +16,7 @@ using UnityEngine.UIElements;
 public class AttachmentDTO
 {
     public string name;
+    public ItemId id;
     public List<string> description;
     public string flavor;
     public int priceBuy;
@@ -66,6 +67,7 @@ public class AttachmentDTO
         return new AttachmentDTO
         {
             name = attachment.itemDefinition.LocalizedDisplayName,
+            id = attachment.itemDefinition.id,
             description = helpers.GetDescriptionText(enchUI.itemDescription),
             flavor = attachment.itemDefinition.LocalizedFlavor,
             priceBuy = attachment.PriceBuy,
