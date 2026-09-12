@@ -76,8 +76,8 @@ public class Plugin : BaseUnityPlugin
         GrabWeapons = Config.Bind("Hotkeys", "Start Weapon Grabbing", new KeyboardShortcut(KeyCode.U, KeyCode.LeftShift));
         GrabEnchantments = Config.Bind("Hotkeys", "Start Enchantment Grabbing", new KeyboardShortcut(KeyCode.I, KeyCode.LeftShift));
         GrabEquipment = Config.Bind("Hotkeys", "Start Equipment Grabbing", new KeyboardShortcut(KeyCode.O, KeyCode.LeftShift));
-        GrabAttachments = Config.Bind("Hotkeys", "Start Attachment Grabbing", new KeyboardShortcut(KeyCode.P, KeyCode.LeftShift));
-        GrabChambers = Config.Bind("Hotkeys", "Start Attachment Grabbing", new KeyboardShortcut(KeyCode.J, KeyCode.LeftShift));
+        GrabAttachments = Config.Bind("Hotkeys", "Start Attachment Grabbing", new KeyboardShortcut(KeyCode.Y, KeyCode.LeftShift));
+        GrabChambers = Config.Bind("Hotkeys", "Start Chamber Grabbing", new KeyboardShortcut(KeyCode.P, KeyCode.LeftShift));
         Debug.Log("[ Mod: EverythingGrabber ] Plugin loaded successfully");
     }
 
@@ -154,7 +154,7 @@ public class Plugin : BaseUnityPlugin
 
             if (itHasBegun == false)
             {
-                Debug.Log("[ Mod: EverythingGrabber ] idk why but ithasbegun is false");
+                Debug.Log("[ Mod: EverythingGrabber ] Not ready for capture. Skipping...");
                 return;
             }
             if (enchantment == null)
@@ -208,7 +208,7 @@ public class Plugin : BaseUnityPlugin
 
             if (itHasBegun == false)
             {
-                Debug.Log("[ Mod: EverythingGrabber ] idk why but ithasbegun is false");
+                Debug.Log("[ Mod: EverythingGrabber ] Not ready for capture. Skipping...");
                 return;
             }
             if (equipment == null)
@@ -277,12 +277,13 @@ public class Plugin : BaseUnityPlugin
             
             if (attachment?.itemDefinition?.ItemType != ItemType.Attachment) return;
             if (attachment.itemDefinition.LocalizedDisplayName.StartsWith("Test")) return;
+            if (attachment.itemDefinition.LocalizedDisplayName.Contains("Chamber Chisel")) return;
 
             Debug.Log("[ Mod: EverythingGrabber ] Postfix found an attachment");
 
             if (itHasBegun == false)
             {
-                Debug.Log("[ Mod: EverythingGrabber ] idk why but ithasbegun is false");
+                Debug.Log("[ Mod: EverythingGrabber ] Not ready for capture. Skipping...");
                 return;
             }
             if (attachment == null)
@@ -326,12 +327,12 @@ public class Plugin : BaseUnityPlugin
 
             if (itHasBegun == false)
             {
-                Debug.Log("[ Mod: EverythingGrabber ] idk why but ithasbegun is false");
+                Debug.Log("[ Mod: EverythingGrabber ] Not ready for capture. Skipping...");
                 return;
             }
             if (chamber == null)
             {
-                Debug.Log("[ Mod: EverythingGrabber ] For some fucking reason attachment is null");
+                Debug.Log("[ Mod: EverythingGrabber ] For some fucking reason chamber is null");
                 return;
             }
 
@@ -343,19 +344,18 @@ public class Plugin : BaseUnityPlugin
                 Debug.Log("[ Mod: EverythingGrabber ] ReturnDTO failed");
                 return;
             }
-            if (returnDTO.modifiers.Count == 0) 
+            /*if (returnDTO.modifiers.Count == 0) 
             {
                 Debug.Log("[ Mod: EverythingGrabber ] WHY WOULD MODIFIERS BE ZERO");
                 return;
-            }
+            }*/
 
-            attachmentPropertyList.Add(returnDTO);
+            chamberPropertyList.Add(returnDTO);
             ImageHelpers.SaveBaseImage(chamber.itemDefinition, "Chambers");
             
             ClearInventory();
         }
     }
-
 
     [HarmonyPatch(typeof(InventoryUI), "Start")]
     public class InventoryInterceptor
@@ -427,6 +427,7 @@ public class Plugin : BaseUnityPlugin
             if (itemDef?.ItemType != ItemType.Attachment) continue;
             if (!itemDef.includedInEarlyAccess) continue;
             if (itemDef.LocalizedDisplayName.StartsWith("Test")) continue;
+            if (itemDef.LocalizedDisplayName.Contains("Chamber Chisel")) continue;
 
             attachmentList.Add(itemDef);
         }
@@ -439,9 +440,15 @@ public class Plugin : BaseUnityPlugin
             
             chamberList.Add(itemDef);
         }
+        foreach (var chamber in chamberList)
+        {
+            Debug.Log($"[ Mod: EverythingGrabber ] Chamber list item: {chamber.LocalizedDisplayName}");
+        }
+        
     }
     private IEnumerator SpawnWeapons()
     {
+        Debug.Log("[ Mod: EverythingGrabber ] Beginning weapon spawning & capture");
         if (weaponList.Count == 0) yield break;
 
         ClearSlots();
@@ -469,11 +476,12 @@ public class Plugin : BaseUnityPlugin
         }
 
         SaveWeapons(weaponPropertyList);
-
         itHasBegun = false;
+        Debug.Log("[ Mod: EverythingGrabber ] Weapon spawn & capture complete");
     }
     private IEnumerator SpawnEnchantments()
     {
+        Debug.Log("[ Mod: EverythingGrabber ] Beginning enchantment spawning & capture");
         if (enchantmentList.Count == 0) yield break;
         
         ClearSlots();
@@ -489,15 +497,16 @@ public class Plugin : BaseUnityPlugin
             yield return null;
         }
 
-        // SpawnToInventory adds items with a variable delay, so wait until the postfixes stop catching new ones.
         yield return WaitForListToSettle(() => oilList.Count + scrollList.Count);
 
         SaveData("Oils", oilList);
         SaveData("Scrolls", scrollList);
         itHasBegun = false;
+        Debug.Log("[ Mod: EverythingGrabber ] Enchantment spawn & capture complete");
     }
     private IEnumerator SpawnAttachments()
     {
+        Debug.Log("[ Mod: EverythingGrabber ] Beginning attachment spawning & capture");
         if (attachmentList.Count == 0) yield break;
         
         ClearSlots();
@@ -513,14 +522,15 @@ public class Plugin : BaseUnityPlugin
             yield return null;
         }
 
-        // SpawnToInventory adds items with a variable delay, so wait until the postfixes stop catching new ones.
         yield return WaitForListToSettle(() => attachmentPropertyList.Count);
 
         SaveData("Attachments", attachmentPropertyList);
         itHasBegun = false;
+        Debug.Log("[ Mod: EverythingGrabber ] Attachment spawn & capture complete");
     }
     private IEnumerator SpawnChambers()
     {
+        Debug.Log("[ Mod: EverythingGrabber ] Beginning chamber spawning & capture");
         if (chamberList.Count == 0) yield break;
         
         ClearSlots();
@@ -536,14 +546,15 @@ public class Plugin : BaseUnityPlugin
             yield return null;
         }
 
-        // SpawnToInventory adds items with a variable delay, so wait until the postfixes stop catching new ones.
-        yield return WaitForListToSettle(() => attachmentPropertyList.Count);
+        yield return WaitForListToSettle(() => chamberPropertyList.Count);
 
         SaveData("Chambers", chamberPropertyList);
         itHasBegun = false;
+        Debug.Log("[ Mod: EverythingGrabber ] Chamber spawn & capture complete");
     }
     private IEnumerator SpawnEquipment()
     {
+        Debug.Log("[ Mod: EverythingGrabber ] Beginning equipment spawning & capture");
         if (equipmentList.Count == 0) yield break;
         
         ClearSlots();
@@ -559,12 +570,12 @@ public class Plugin : BaseUnityPlugin
             yield return null;
         }
 
-        // SpawnToInventory adds items with a variable delay, so wait until the postfixes stop catching new ones.
         yield return WaitForListToSettle(() => armorList.Count + trinketList.Count);
 
         SaveData("Armor", armorList);
         SaveData("Trinkets", trinketList);
         itHasBegun = false;
+        Debug.Log("[ Mod: EverythingGrabber ] Equipment spawn & capture complete");
     }
     private static IEnumerator WaitForListToSettle(Func<int> getCount, int settleFrames = 60, int maxFrames = 1800)
     {
