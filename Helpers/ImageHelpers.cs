@@ -1,5 +1,6 @@
 using System.IO;
 using BepInEx;
+using PerfectRandom.Sulfur.Core;
 using PerfectRandom.Sulfur.Core.Items;
 using PerfectRandom.Sulfur.Core.Weapons;
 using UnityEngine;
@@ -25,6 +26,19 @@ public class ImageHelpers {
         byte[] pngBytes = ImageConversion.EncodeToPNG(MakeTextureReadable(item.artwork.texture));
 
         string name = Regex.Replace(item.LocalizedDisplayName, @"[^a-zA-Z0-9\s\(\)\[\]\-]", "");
+        
+        string rootDir = Paths.GameRootPath;
+        string folderPath = Path.Combine(rootDir, $"Extracted Data\\{type}\\Images\\");
+        Directory.CreateDirectory(folderPath);
+
+        string outputPath = Path.Combine(folderPath, $"{name.ToLower().Replace(" ", "_")}.png");
+        File.WriteAllBytes(outputPath, pngBytes);
+    }
+    public static void SaveBaseImageCaliber(CaliberType item, string type)
+    {
+        byte[] pngBytes = ImageConversion.EncodeToPNG(MakeTextureReadable(AssetAccess.GetAsset(item.usesResource).icon.texture));
+
+        string name = Regex.Replace(AssetAccess.GetAsset(item.usesResource).LocalizedShortName, @"[^a-zA-Z0-9\s\(\)\[\]\-]", "");
         
         string rootDir = Paths.GameRootPath;
         string folderPath = Path.Combine(rootDir, $"Extracted Data\\{type}\\Images\\");
