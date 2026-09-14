@@ -16,7 +16,7 @@ using UnityEngine.UIElements;
 public class ChamberDTO
 {
     public string name;
-    public ItemId id;
+    public ushort id = 0;
     public List<string> description;
     public string flavor;
     public int priceBuy;
@@ -32,7 +32,7 @@ public class ChamberDTO
         return new ChamberDTO
         {
             name = chamber.itemDefinition.LocalizedDisplayName,
-            id = chamber.itemDefinition.id,
+            id = chamber.itemDefinition.id.value,
             description = helpers.GetDescriptionText(enchUI.itemDescription),
             flavor = chamber.itemDefinition.LocalizedFlavor,
             priceBuy = chamber.PriceBuy,
