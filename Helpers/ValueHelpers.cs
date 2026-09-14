@@ -330,7 +330,7 @@ public class ValueHelpers
                 if (desc.ToString() == "Drag this item onto a weapon with an empty enchantment slot to enchant it.") continue;
                 if (desc.ToString() == "Enchantment") continue;
                 if (desc.ToString() == "Elemental enchantment") continue;
-                if (desc.ToString() == "Attachment ") continue;
+                if (desc.ToString() == "Attachment") continue;
                 descriptionStrings.Add(desc.ToString());
             }
         }

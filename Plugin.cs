@@ -22,6 +22,7 @@ using PerfectRandom.Sulfur.Core.UI;
 using PerfectRandom.Sulfur.Core.UI.Inventory;
 using PerfectRandom.Sulfur.Core.DevTools;
 using PerfectRandom.Sulfur.Core.UI.ItemDescription;
+using System.Text.RegularExpressions;
 
 namespace EverythingDataGrabber;
 
@@ -42,25 +43,30 @@ public class Plugin : BaseUnityPlugin
 
     // Weapon fields
     private static List<ItemDefinition> weaponList = [];
-    private static List<BaseDTO> weaponPropertyList = [];
+    private static List<BaseDTO> weaponData = [];
 
     // Enchantment fields
     private static List<ItemDefinition> enchantmentList = [];
-    private static List<EnhancementDTO> oilList = [];
-    private static List<EnhancementDTO> scrollList = [];
+    private static List<EnhancementDTO> oilData = [];
+    private static List<EnhancementDTO> scrollData = [];
 
     // Equipment fields
     private static List<ItemDefinition> equipmentList = [];
-    private static List<EquipmentDTO> armorList = [];
-    private static List<EquipmentDTO> trinketList = [];
+    private static List<EquipmentDTO> armorData = [];
+    private static List<EquipmentDTO> trinketData = [];
 
     // Attachment fields
     private static List<ItemDefinition> attachmentList = [];
-    private static List<AttachmentDTO> attachmentPropertyList = [];
+    private static List<AttachmentDTO> attachmentData = [];
 
     // Chamber fields
     private static List<ItemDefinition> chamberList = [];
-    private static List<AttachmentDTO> chamberPropertyList = [];
+    private static List<AttachmentDTO> chamberData = [];
+
+    // Caliber fields
+    private static List<CaliberType> caliberList = [];
+    private static Dictionary<string, ItemDefinition> caliberItemList = [];
+    private static List<CaliberDTO> caliberData = [];
 
     // Shortcut fields
     private ConfigEntry<KeyboardShortcut> GrabWeapons { get; set; }
@@ -68,6 +74,7 @@ public class Plugin : BaseUnityPlugin
     private ConfigEntry<KeyboardShortcut> GrabEquipment { get; set; }
     private ConfigEntry<KeyboardShortcut> GrabAttachments { get; set; }
     private ConfigEntry<KeyboardShortcut> GrabChambers { get; set; }
+    private ConfigEntry<KeyboardShortcut> GrabCaliber { get; set; }
 
     private void Awake()
     {
@@ -78,6 +85,7 @@ public class Plugin : BaseUnityPlugin
         GrabEquipment = Config.Bind("Hotkeys", "Start Equipment Grabbing", new KeyboardShortcut(KeyCode.O, KeyCode.LeftShift));
         GrabAttachments = Config.Bind("Hotkeys", "Start Attachment Grabbing", new KeyboardShortcut(KeyCode.Y, KeyCode.LeftShift));
         GrabChambers = Config.Bind("Hotkeys", "Start Chamber Grabbing", new KeyboardShortcut(KeyCode.P, KeyCode.LeftShift));
+        GrabCaliber = Config.Bind("Hotkeys", "Start Caliber Grabbing", new KeyboardShortcut(KeyCode.LeftBracket, KeyCode.LeftShift));
         Debug.Log("[ Mod: EverythingGrabber ] Plugin loaded successfully");
     }
 
@@ -103,6 +111,10 @@ public class Plugin : BaseUnityPlugin
         {
             StartCoroutine(SpawnChambers());
         }
+        if (GrabCaliber.Value.IsDown())
+        {
+            StartCoroutine(CollectCalibers());
+        }
     }
 
     [HarmonyPatch(typeof(Weapon), "Initialize")]
@@ -125,7 +137,7 @@ public class Plugin : BaseUnityPlugin
             if (returnDTO == null) return;
             if (itHasBegun == false) return;
 
-            bool exists = weaponPropertyList.Any(item => item.Name == returnDTO.Name);
+            bool exists = weaponData.Any(item => item.Name == returnDTO.Name);
 
             if (exists == true)
             {
@@ -134,7 +146,7 @@ public class Plugin : BaseUnityPlugin
             
             ImageHelpers.SaveBaseImageWeapon(weapon, returnDTO);
 
-            weaponPropertyList.Add(returnDTO);
+            weaponData.Add(returnDTO);
         }
     }
 
@@ -178,12 +190,12 @@ public class Plugin : BaseUnityPlugin
             }
             if (returnDTO.name.Contains("Oil"))
             {
-                oilList.Add(returnDTO);
+                oilData.Add(returnDTO);
                 ImageHelpers.SaveBaseImage(enchantment.itemDefinition, "Oils");
             }
             else
             {
-                scrollList.Add(returnDTO);
+                scrollData.Add(returnDTO);
                 ImageHelpers.SaveBaseImage(enchantment.itemDefinition, "Scrolls");
             }
             ClearInventory();
@@ -231,7 +243,7 @@ public class Plugin : BaseUnityPlugin
             
             if (equipment.itemDefinition.ItemType == ItemType.Armor)
             {
-                armorList.Add(new EquipmentDTO
+                armorData.Add(new EquipmentDTO
                 {
                     name = equipment.itemDefinition.LocalizedDisplayName,
                     id = equipment.itemDefinition.id,
@@ -250,7 +262,7 @@ public class Plugin : BaseUnityPlugin
             }
             else
             {
-                trinketList.Add(new EquipmentDTO
+                trinketData.Add(new EquipmentDTO
                 {
                     name = equipment.itemDefinition.LocalizedDisplayName,
                     id = equipment.itemDefinition.id,
@@ -308,7 +320,7 @@ public class Plugin : BaseUnityPlugin
                 return;
             }
 
-            attachmentPropertyList.Add(returnDTO);
+            attachmentData.Add(returnDTO);
             ImageHelpers.SaveBaseImage(attachment.itemDefinition, "Attachments");
             
             ClearInventory();
@@ -352,7 +364,7 @@ public class Plugin : BaseUnityPlugin
                 return;
             }*/
 
-            chamberPropertyList.Add(returnDTO);
+            chamberData.Add(returnDTO);
             ImageHelpers.SaveBaseImage(chamber.itemDefinition, "Chambers");
             
             ClearInventory();
@@ -442,11 +454,34 @@ public class Plugin : BaseUnityPlugin
             
             chamberList.Add(itemDef);
         }
-        foreach (var chamber in chamberList)
+
+        // Build caliber and caliber item database lists
+        foreach (var caliber in Caliberdatabase)
         {
-            Debug.Log($"[ Mod: EverythingGrabber ] Chamber list item: {chamber.LocalizedDisplayName}");
+            caliberList.Add(caliber);
         }
-        
+        foreach (var itemDef in itemDatabase)
+        {
+            if (!itemDef) continue;
+            if (!itemDef.name.StartsWith("Ammo")) continue;
+
+            string input = itemDef.LocalizedDisplayName;
+            string pattern = @"Ammo Box \((.+?)\)";
+            Match match = Regex.Match(input, pattern);
+
+            if (match.Groups[1].Value.ToLower() == "energy cells")
+            {
+                caliberItemList.Add("energy", itemDef);
+            }
+
+            if (match.Success)
+            {
+                caliberItemList.Add(match.Groups[1].Value.ToLower(), itemDef);
+            }
+        }
+        foreach (var item in caliberItemList) {
+            Debug.Log($"[ Mod: EverythingGrabber ] Caliber list item: {item.Value.LocalizedDisplayName}");
+        }
     }
     private IEnumerator SpawnWeapons()
     {
@@ -477,7 +512,7 @@ public class Plugin : BaseUnityPlugin
             yield return null;
         }
 
-        SaveWeapons(weaponPropertyList);
+        SaveWeapons(weaponData);
         itHasBegun = false;
         Debug.Log("[ Mod: EverythingGrabber ] Weapon spawn & capture complete");
     }
@@ -499,10 +534,10 @@ public class Plugin : BaseUnityPlugin
             yield return null;
         }
 
-        yield return WaitForListToSettle(() => oilList.Count + scrollList.Count);
+        yield return WaitForListToSettle(() => oilData.Count + scrollData.Count);
 
-        SaveData("Oils", oilList);
-        SaveData("Scrolls", scrollList);
+        SaveData("Oils", oilData);
+        SaveData("Scrolls", scrollData);
         itHasBegun = false;
         Debug.Log("[ Mod: EverythingGrabber ] Enchantment spawn & capture complete");
     }
@@ -524,9 +559,9 @@ public class Plugin : BaseUnityPlugin
             yield return null;
         }
 
-        yield return WaitForListToSettle(() => attachmentPropertyList.Count);
+        yield return WaitForListToSettle(() => attachmentData.Count);
 
-        SaveData("Attachments", attachmentPropertyList);
+        SaveData("Attachments", attachmentData);
         itHasBegun = false;
         Debug.Log("[ Mod: EverythingGrabber ] Attachment spawn & capture complete");
     }
@@ -548,9 +583,9 @@ public class Plugin : BaseUnityPlugin
             yield return null;
         }
 
-        yield return WaitForListToSettle(() => chamberPropertyList.Count);
+        yield return WaitForListToSettle(() => chamberData.Count);
 
-        SaveData("Chambers", chamberPropertyList);
+        SaveData("Chambers", chamberData);
         itHasBegun = false;
         Debug.Log("[ Mod: EverythingGrabber ] Chamber spawn & capture complete");
     }
@@ -572,12 +607,43 @@ public class Plugin : BaseUnityPlugin
             yield return null;
         }
 
-        yield return WaitForListToSettle(() => armorList.Count + trinketList.Count);
+        yield return WaitForListToSettle(() => armorData.Count + trinketData.Count);
 
-        SaveData("Armor", armorList);
-        SaveData("Trinkets", trinketList);
+        SaveData("Armor", armorData);
+        SaveData("Trinkets", trinketData);
         itHasBegun = false;
         Debug.Log("[ Mod: EverythingGrabber ] Equipment spawn & capture complete");
+    }
+    private IEnumerator CollectCalibers()
+    {
+        Debug.Log("[ Mod: EverythingGrabber ] Beginning caliber capture");
+        if (caliberList.Count == 0) yield break;
+        
+        ClearSlots();
+        ClearInventory();
+
+        itHasBegun = true;
+
+        foreach (var caliber in caliberList)
+        {
+            if (!caliber) continue;
+            if (!AssetAccess.GetAsset(caliber.usesResource)) continue;
+
+            Debug.Log($"[ Mod: EverythingGrabber ] Working on {AssetAccess.GetAsset(caliber.usesResource).LocalizedShortName}");
+            var helper = new ValueHelpers();
+            if (caliberItemList.TryGetValue(AssetAccess.GetAsset(caliber.usesResource).LocalizedShortName.ToLower(), out var matchingCaliber))
+            {
+                CaliberDTO returnDTO = CaliberDTO.GetCaliberDTO(caliber, matchingCaliber, helper);
+                caliberData.Add(returnDTO);
+            }
+            ImageHelpers.SaveBaseImageCaliber(caliber, "Caliber");
+        }
+
+        yield return WaitForListToSettle(() => caliberList.Count);
+
+        SaveData("Caliber", caliberData);
+        itHasBegun = false;
+        Debug.Log("[ Mod: EverythingGrabber ] Caliber capture complete");
     }
     private static IEnumerator WaitForListToSettle(Func<int> getCount, int settleFrames = 60, int maxFrames = 1800)
     {
@@ -624,49 +690,21 @@ public class Plugin : BaseUnityPlugin
         }
     }
 
-    private static void SaveWeapons(List<BaseDTO> weaponPropertyList)
+    private static void SaveWeapons(List<BaseDTO> weaponData)
     {
-        Debug.Log(weaponPropertyList);
+        Debug.Log(weaponData);
         var settings = new JsonSerializerSettings
         {
             ContractResolver = new CustomContractResolver(),
             Formatting = Formatting.Indented
         };
 
-        string json = JsonConvert.SerializeObject(weaponPropertyList, settings);
+        string json = JsonConvert.SerializeObject(weaponData, settings);
         string rootDir = Paths.GameRootPath;
         string folderPath = Path.Combine(rootDir, "Extracted Data\\Weapons\\");
         Directory.CreateDirectory(folderPath);
-        string path = Path.Combine(folderPath, "weaponPropertyList.json");
+        string path = Path.Combine(folderPath, "weaponData.json");
         File.WriteAllText(path, json);
-    }
-
-    private static void SaveEnchantments()
-    {
-        JsonSerializerSettings settings = new JsonSerializerSettings
-        {
-            ContractResolver = new IgnoreUnchangedDefaultsResolver(),
-            NullValueHandling = NullValueHandling.Ignore,
-            DefaultValueHandling = DefaultValueHandling.Ignore,
-            Formatting = Formatting.Indented
-        };
-
-        Logger.LogMessage($"Number of Oils: {oilList.Count}");
-        Logger.LogMessage($"Number of Scrolls: {scrollList.Count}");
-
-        string json = JsonConvert.SerializeObject(oilList, settings);
-        string rootDir = Paths.GameRootPath;
-        string folderPath = Path.Combine(rootDir, "Extracted Data\\Oils\\");
-        Directory.CreateDirectory(folderPath);
-        string path = Path.Combine(folderPath, "oils.json");
-        File.WriteAllText(path, json);
-
-        string json2 = JsonConvert.SerializeObject(scrollList, settings);
-        string rootDir2 = Paths.GameRootPath;
-        string folderPath2 = Path.Combine(rootDir2, "Extracted Data\\Scrolls\\");
-        Directory.CreateDirectory(folderPath2);
-        string path2 = Path.Combine(folderPath2, "scrolls.json");
-        File.WriteAllText(path2, json2);
     }
 
     private static void SaveData<T>(string type, List<T> items)
@@ -686,7 +724,7 @@ public class Plugin : BaseUnityPlugin
         string path = Path.Combine(folderPath, $"{type.ToLower()}.json");
         File.WriteAllText(path, json);
 
-        string json2 = JsonConvert.SerializeObject(trinketList, settings);
+        string json2 = JsonConvert.SerializeObject(trinketData, settings);
         string rootDir2 = Paths.GameRootPath;
         string folderPath2 = Path.Combine(rootDir2, "Extracted Data\\Trinkets\\");
         Directory.CreateDirectory(folderPath2);
