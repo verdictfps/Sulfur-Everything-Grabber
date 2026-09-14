@@ -11,7 +11,7 @@ public class ThrowableDTO : BaseDTO
         return new ThrowableDTO
         {
             Name = weapon.weaponDefinition.LocalizedDisplayName,
-            id = weapon.weaponDefinition.id,
+            id = weapon.weaponDefinition.id.value,
             LocalizedFlavor = weapon.weaponDefinition.LocalizedFlavor,
             Core = CoreDTO.SetCoreThrowableStats(weapon, helpers),
             Modifiable = modifiableHelper.GetModifiableStats(weapon),
