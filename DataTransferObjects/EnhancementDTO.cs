@@ -14,7 +14,7 @@ using PerfectRandom.Sulfur.Core.UI.Inventory;
 public class EnhancementDTO
 {
     public string name;
-    public ItemId id;
+    public ushort id = 0;
     public List<string> description;
     public int priceBuy;
     public int priceSell;
@@ -64,7 +64,7 @@ public class EnhancementDTO
         return new EnhancementDTO
         {
             name = enchantment.itemDefinition.LocalizedDisplayName,
-            id = enchantment.itemDefinition.id,
+            id = enchantment.itemDefinition.id.value,
             description = helpers.GetDescriptionText(enchUI.itemDescription),
             priceBuy = enchantment.PriceBuy,
             priceSell = enchantment.PriceSell,
