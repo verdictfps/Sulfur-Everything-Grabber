@@ -7,7 +7,7 @@ using PerfectRandom.Sulfur.Core.Weapons;
 public class BaseDTO
 {
     public string Name;
-    public ItemId id;
+    public ushort id = 0;
     public string displayName;
     public string weaponType;
     public string LocalizedFlavor;

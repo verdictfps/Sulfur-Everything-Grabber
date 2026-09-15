@@ -246,7 +246,7 @@ public class Plugin : BaseUnityPlugin
                 armorData.Add(new EquipmentDTO
                 {
                     name = equipment.itemDefinition.LocalizedDisplayName,
-                    id = equipment.itemDefinition.id,
+                    id = equipment.itemDefinition.id.value,
                     description = helper.GetDescriptionText(enchUI.itemDescription),
                     flavorText = equipment.itemDefinition.LocalizedFlavor,
                     type = "Armor",
@@ -265,7 +265,7 @@ public class Plugin : BaseUnityPlugin
                 trinketData.Add(new EquipmentDTO
                 {
                     name = equipment.itemDefinition.LocalizedDisplayName,
-                    id = equipment.itemDefinition.id,
+                    id = equipment.itemDefinition.id.value,
                     description = helper.GetDescriptionText(enchUI.itemDescription),
                     flavorText = equipment.itemDefinition.LocalizedFlavor,
                     type = "Trinket",
