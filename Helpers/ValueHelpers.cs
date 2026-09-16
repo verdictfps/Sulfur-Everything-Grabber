@@ -10,12 +10,14 @@ using PerfectRandom.Sulfur.Core;
 using PerfectRandom.Sulfur.Core.CharacterStats;
 using PerfectRandom.Sulfur.Core.Items;
 using PerfectRandom.Sulfur.Core.Weapons;
+using PerfectRandom.Sulfur.Core.UI;
 using UnityEngine;
 using System.Reflection;
 using PerfectRandom.Sulfur.Core.UI.Inventory;
 using PerfectRandom.Sulfur.Core.UI.ItemDescription;
 using UnityEngine.Pool;
 using System.Text.RegularExpressions;
+using HarmonyLib;
 
 public class ValueHelpers
 {
@@ -321,6 +323,7 @@ public class ValueHelpers
             {
                 bool isTrue = Regex.IsMatch(desc.ToString(), pattern);
                 if (isTrue == true) continue;
+                if (desc.ToString() == "Attachment ") continue;
                 descriptionStrings.Add(desc.ToString());
             }
         }
@@ -330,19 +333,21 @@ public class ValueHelpers
                 if (desc.ToString() == "Drag this item onto a weapon with an empty enchantment slot to enchant it.") continue;
                 if (desc.ToString() == "Enchantment") continue;
                 if (desc.ToString() == "Elemental enchantment") continue;
-                if (desc.ToString() == "Attachment") continue;
+                if (desc.ToString() == "Attachment ") continue;
                 descriptionStrings.Add(desc.ToString());
             }
         }
         if (enchantmentList != null) {
             foreach (var desc in enchantmentList)
             {
+                if (desc.ToString() == "Attachment ") continue;
                 descriptionStrings.Add(desc.ToString());
             }
         }
         if (attachmentList != null) {
             foreach (var desc in attachmentList)
             {
+                if (desc.ToString() == "Attachment ") continue;
                 descriptionStrings.Add(desc.ToString());
             }
         }
@@ -390,5 +395,59 @@ public class ValueHelpers
             priceSellRaw += 1;
         }
         return priceSellRaw;
+    }
+    public string GetAttachmentType(InventoryItem attachment)
+    {
+        if (attachment.itemDefinition.displayName == "Laser Sight")
+        {
+            return "Laser";
+        }
+        else if (attachment.itemDefinition.description.StartsWith("Magnification"))
+        {
+            return "Sight";
+        }
+        else if (attachment.itemDefinition.description != "")
+        {
+            return "Firemode";
+        }
+        else
+        {
+            return "Muzzle";
+        }
+    }
+    public string GetLaserColor(InventoryItem attachment)
+    {
+        if (GetAttachmentType(attachment) == "Laser") {
+            return CapitalizeWord(attachment.itemDefinition.LocalizedFlavor.Split(" ")[^2]);
+        }
+        else
+        {
+            return null;
+        }
+    }
+    public string GetMagnification(InventoryItem attachment)
+    {
+        if (GetAttachmentType(attachment) == "Sight") {
+            string magnification = attachment.itemDefinition.description.Split(" ")[1];
+            if (magnification == "None")
+            {
+                return "0x";
+            }
+            else
+            {
+                return magnification;
+            }
+        }
+        else
+        {
+            return null;
+        }
+    }
+    public static string CapitalizeWord(string word)
+    {
+        if (string.IsNullOrEmpty(word)) return word;
+        if (word.Length == 1) return word.ToUpper();
+
+        return char.ToUpper(word[0]) + word.Substring(1).ToLower();
     }
 }
