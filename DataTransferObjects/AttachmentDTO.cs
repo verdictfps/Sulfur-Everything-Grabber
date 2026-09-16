@@ -10,12 +10,16 @@ using UnityEngine;
 using PerfectRandom.Sulfur.Core.UI.ItemDescription;
 using PerfectRandom.Sulfur.Core.UI.Inventory;
 using UnityEngine.UIElements;
+using I2.Loc;
 
 
 [Serializable]
 public class AttachmentDTO
 {
     public string name;
+    public string type;
+    public string magnification;
+    public string color;
     public ushort id = 0;
     public List<string> description;
     public string flavor;
@@ -67,6 +71,9 @@ public class AttachmentDTO
         return new AttachmentDTO
         {
             name = attachment.itemDefinition.LocalizedDisplayName,
+            type = helpers.GetAttachmentType(attachment),
+            magnification = helpers.GetMagnification(attachment),
+            color = helpers.GetLaserColor(attachment),
             id = attachment.itemDefinition.id.value,
             description = helpers.GetDescriptionText(enchUI.itemDescription),
             flavor = attachment.itemDefinition.LocalizedFlavor,
