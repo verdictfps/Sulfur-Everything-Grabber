@@ -18,6 +18,9 @@ public class AttachmentDTO
 {
     public string name;
     public string type;
+    public ushort id = 0;
+    public List<string> itemDescription;
+    public string LocalizedFlavor;
     public AttachmentStatsDTO stats;
     public List<AttachmentModifierDTO> modifiers;
     public static AttachmentDTO GetAttachmentDTO(InventoryItem attachment, ValueHelpers helpers)
@@ -64,6 +67,9 @@ public class AttachmentDTO
         {
             name = attachment.itemDefinition.LocalizedDisplayName,
             type = helpers.GetAttachmentType(attachment),
+            id = attachment.itemDefinition.id.value,
+            itemDescription = helpers.GetDescriptionText(enchUI.itemDescription),
+            LocalizedFlavor = attachment.itemDefinition.LocalizedFlavor,
             stats = AttachmentStatsDTO.GetAttachmentStatsDTO(attachment, helpers, enchUI),
             modifiers = itemModifiers,
         };
@@ -124,9 +130,6 @@ public class AttachmentStatsDTO
 {
     public string magnification;
     public string color;
-    public ushort id = 0;
-    public List<string> description;
-    public string flavor;
     public int priceBuy;
     public int priceSell;
     public int InventorySizeX;
@@ -136,9 +139,6 @@ public class AttachmentStatsDTO
         return new AttachmentStatsDTO {
             magnification = helpers.GetMagnification(attachment),
             color = helpers.GetLaserColor(attachment),
-            id = attachment.itemDefinition.id.value,
-            description = helpers.GetDescriptionText(enchUI.itemDescription),
-            flavor = attachment.itemDefinition.LocalizedFlavor,
             priceBuy = attachment.PriceBuy,
             priceSell = attachment.PriceSell,
             InventorySizeX = attachment.InventorySize.x,
