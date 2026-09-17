@@ -699,9 +699,12 @@ public class Plugin : BaseUnityPlugin
             Formatting = Formatting.Indented
         };
 
+        DateTime dt = DateTime.Now;
+        string isoFormat = dt.ToString("yyyy-MM-dd");
+
         string json = JsonConvert.SerializeObject(weaponData, settings);
         string rootDir = Paths.GameRootPath;
-        string folderPath = Path.Combine(rootDir, "Extracted Data\\Weapons\\");
+        string folderPath = Path.Combine(rootDir, $"Extracted Data\\{isoFormat}\\Weapons\\");
         Directory.CreateDirectory(folderPath);
         string path = Path.Combine(folderPath, "weaponData.json");
         File.WriteAllText(path, json);
@@ -717,19 +720,15 @@ public class Plugin : BaseUnityPlugin
             Formatting = Formatting.Indented
         };
 
+        DateTime dt = DateTime.Now;
+        string isoFormat = dt.ToString("yyyy-MM-dd");
+
         string json = JsonConvert.SerializeObject(items, settings);
         string rootDir = Paths.GameRootPath;
-        string folderPath = Path.Combine(rootDir, $"Extracted Data\\{type}\\");
+        string folderPath = Path.Combine(rootDir, $"Extracted Data\\{isoFormat}\\{type}\\");
         Directory.CreateDirectory(folderPath);
         string path = Path.Combine(folderPath, $"{type.ToLower()}.json");
         File.WriteAllText(path, json);
-
-        string json2 = JsonConvert.SerializeObject(trinketData, settings);
-        string rootDir2 = Paths.GameRootPath;
-        string folderPath2 = Path.Combine(rootDir2, "Extracted Data\\Trinkets\\");
-        Directory.CreateDirectory(folderPath2);
-        string path2 = Path.Combine(folderPath2, "trinkets.json");
-        File.WriteAllText(path2, json2);
     }
 
     private static BaseDTO GetRelevantDTO(Weapon weapon)
