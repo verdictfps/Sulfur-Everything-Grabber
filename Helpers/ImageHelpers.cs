@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using BepInEx;
 using PerfectRandom.Sulfur.Core;
@@ -10,12 +11,15 @@ public class ImageHelpers {
 
     // .............this was a rabbit hole.
     public static void SaveBaseImageWeapon(Weapon weapon, BaseDTO returnDTO)
-    {
+    {   
+        DateTime dt = DateTime.Now;
+        string isoFormat = dt.ToString("yyyy-MM-dd");
+
         byte[] pngBytes = ImageConversion.EncodeToPNG(MakeTextureReadable(weapon.ItemDefinition.artwork.texture));
 
         string name = Regex.Replace(returnDTO.Name, @"[^a-zA-Z0-9\s\(\)\[\]\-]", "");
         string rootDir = Paths.GameRootPath;
-        string folderPath = Path.Combine(rootDir, "Extracted Data\\Weapons\\Images\\");
+        string folderPath = Path.Combine(rootDir, $"Extracted Data\\{isoFormat}\\Weapons\\Images\\");
         Directory.CreateDirectory(folderPath);
 
         string outputPath = Path.Combine(folderPath, $"{name.ToLower().Replace(" ", "_")}.png");
@@ -23,12 +27,15 @@ public class ImageHelpers {
     }
     public static void SaveBaseImage(ItemDefinition item, string type)
     {
+        DateTime dt = DateTime.Now;
+        string isoFormat = dt.ToString("yyyy-MM-dd");
+
         byte[] pngBytes = ImageConversion.EncodeToPNG(MakeTextureReadable(item.artwork.texture));
 
         string name = Regex.Replace(item.LocalizedDisplayName, @"[^a-zA-Z0-9\s\(\)\[\]\-]", "");
         
         string rootDir = Paths.GameRootPath;
-        string folderPath = Path.Combine(rootDir, $"Extracted Data\\{type}\\Images\\");
+        string folderPath = Path.Combine(rootDir, $"Extracted Data\\{isoFormat}\\{type}\\Images\\");
         Directory.CreateDirectory(folderPath);
 
         string outputPath = Path.Combine(folderPath, $"{name.ToLower().Replace(" ", "_")}.png");
@@ -36,12 +43,15 @@ public class ImageHelpers {
     }
     public static void SaveBaseImageCaliber(CaliberType item, string type)
     {
+        DateTime dt = DateTime.Now;
+        string isoFormat = dt.ToString("yyyy-MM-dd");
+
         byte[] pngBytes = ImageConversion.EncodeToPNG(MakeTextureReadable(AssetAccess.GetAsset(item.usesResource).icon.texture));
 
         string name = Regex.Replace(AssetAccess.GetAsset(item.usesResource).LocalizedShortName, @"[^a-zA-Z0-9\s\(\)\[\]\-]", "");
         
         string rootDir = Paths.GameRootPath;
-        string folderPath = Path.Combine(rootDir, $"Extracted Data\\{type}\\Images\\");
+        string folderPath = Path.Combine(rootDir, $"Extracted Data\\{isoFormat}\\{type}\\Images\\");
         Directory.CreateDirectory(folderPath);
 
         string outputPath = Path.Combine(folderPath, $"{name.ToLower().Replace(" ", "_")}.png");
