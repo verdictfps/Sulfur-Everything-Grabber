@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using BepInEx;
 using PerfectRandom.Sulfur.Core;
 using PerfectRandom.Sulfur.Core.Items;
@@ -17,7 +18,17 @@ public class ImageHelpers {
 
         byte[] pngBytes = ImageConversion.EncodeToPNG(MakeTextureReadable(weapon.ItemDefinition.artwork.texture));
 
-        string name = Regex.Replace(returnDTO.Name, @"[^a-zA-Z0-9\s\(\)\[\]\-]", "");
+        var rawName = returnDTO.Name ?? "";
+        var sanitized = new string(rawName.Where(c =>
+            char.IsLetterOrDigit(c) ||
+            char.IsWhiteSpace(c) ||
+            c == '(' || c == ')' || c == '[' || c == ']' || c == '-'
+        ).ToArray());
+
+        var name = string.Join("_",
+            sanitized.Split((char[])null, StringSplitOptions.RemoveEmptyEntries))
+            .ToLowerInvariant();
+
         string rootDir = Paths.GameRootPath;
         string folderPath = Path.Combine(rootDir, $"Extracted Data\\{isoFormat}\\Weapons\\Images\\");
         Directory.CreateDirectory(folderPath);
@@ -32,7 +43,16 @@ public class ImageHelpers {
 
         byte[] pngBytes = ImageConversion.EncodeToPNG(MakeTextureReadable(item.artwork.texture));
 
-        string name = Regex.Replace(item.LocalizedDisplayName, @"[^a-zA-Z0-9\s\(\)\[\]\-]", "");
+        var rawName = item.LocalizedDisplayName ?? "";
+        var sanitized = new string(rawName.Where(c =>
+            char.IsLetterOrDigit(c) ||
+            char.IsWhiteSpace(c) ||
+            c == '(' || c == ')' || c == '[' || c == ']' || c == '-'
+        ).ToArray());
+
+        var name = string.Join("_",
+            sanitized.Split((char[])null, StringSplitOptions.RemoveEmptyEntries))
+            .ToLowerInvariant();
         
         string rootDir = Paths.GameRootPath;
         string folderPath = Path.Combine(rootDir, $"Extracted Data\\{isoFormat}\\{type}\\Images\\");
@@ -48,7 +68,16 @@ public class ImageHelpers {
 
         byte[] pngBytes = ImageConversion.EncodeToPNG(MakeTextureReadable(AssetAccess.GetAsset(item.usesResource).icon.texture));
 
-        string name = Regex.Replace(AssetAccess.GetAsset(item.usesResource).LocalizedShortName, @"[^a-zA-Z0-9\s\(\)\[\]\-]", "");
+        var rawName = AssetAccess.GetAsset(item.usesResource).LocalizedShortName ?? "";
+        var sanitized = new string(rawName.Where(c =>
+            char.IsLetterOrDigit(c) ||
+            char.IsWhiteSpace(c) ||
+            c == '(' || c == ')' || c == '[' || c == ']' || c == '-'
+        ).ToArray());
+
+        var name = string.Join("_",
+            sanitized.Split((char[])null, StringSplitOptions.RemoveEmptyEntries))
+            .ToLowerInvariant();
         
         string rootDir = Paths.GameRootPath;
         string folderPath = Path.Combine(rootDir, $"Extracted Data\\{isoFormat}\\{type}\\Images\\");
